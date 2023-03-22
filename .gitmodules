@@ -1,0 +1,3 @@
+[submodule "kubeflow-aks"]
+	path = kubeflow-aks
+	url = https://github.com/ziyixi/kubeflow-aks
