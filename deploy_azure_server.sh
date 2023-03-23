@@ -103,34 +103,34 @@ kubectl get pods -n kubeflow-user-example-com
 kubectl rollout restart deployment dex -n auth
 
 IP=$(kubectl -n istio-system get service istio-ingressgateway --output jsonpath={.status.loadBalancer.ingress[0].ip})
-# echo "Kubeflow is deployed at http://$IP/"
-# cd ..
-# sed -i '' "s/20.237.5.253/$IP/" tls-manifest/certificate.yaml
+echo "Kubeflow is deployed at http://$IP/"
+cd ..
+sed -i '' "s/20.237.5.253/$IP/" tls-manifest/certificate.yaml
 
-# echo "Kubeflow is ready to use."
+echo "Kubeflow is ready to use."
 
-# # * Wait for all required pods to be in the "Running" state
-# required_namespaces=("cert-manager" "istio-system" "auth" "knative-eventing" "knative-serving" "kubeflow" "kubeflow-user-example-com")
+# * Wait for all required pods to be in the "Running" state
+required_namespaces=("cert-manager" "istio-system" "auth" "knative-eventing" "knative-serving" "kubeflow" "kubeflow-user-example-com")
 
-# echo "Waiting for all required pods to be running..."
+echo "Waiting for all required pods to be running..."
 
-# for ns in "${required_namespaces[@]}"; do
-#     while true; do
-#         echo "Checking pods in namespace $ns..."
-#         not_running_pods=$(kubectl get pods -n "$ns" --no-headers | grep -v "Running" | wc -l)
-#         if [ "$not_running_pods" -eq 0 ]; then
-#             echo "All pods in namespace $ns are running."
-#             break
-#         else
-#             echo "Some pods are not running in namespace $ns. Retrying in 10 seconds..."
-#             sleep 10
-#         fi
-#     done
-# done
+for ns in "${required_namespaces[@]}"; do
+    while true; do
+        echo "Checking pods in namespace $ns..."
+        not_running_pods=$(kubectl get pods -n "$ns" --no-headers | grep -v "Running" | wc -l)
+        if [ "$not_running_pods" -eq 0 ]; then
+            echo "All pods in namespace $ns are running."
+            break
+        else
+            echo "Some pods are not running in namespace $ns. Retrying in 10 seconds..."
+            sleep 10
+        fi
+    done
+done
 
-# echo "All required pods are running."
+echo "All required pods are running."
 
-# # * forward the kubeflow port
-# echo "Forwarding the Kubeflow port..."
-# kubectl port-forward svc/istio-ingressgateway -n istio-system 8443:443
-# echo "Enjoy Kubeflow port forwarding!"
+# * forward the kubeflow port
+echo "Forwarding the Kubeflow port..."
+kubectl port-forward svc/istio-ingressgateway -n istio-system 8443:443
+echo "Enjoy Kubeflow port forwarding!"
