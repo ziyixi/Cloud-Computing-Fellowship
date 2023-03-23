@@ -108,6 +108,7 @@ IP=$(kubectl -n istio-system get service istio-ingressgateway --output jsonpath=
 echo "Kubeflow is deployed at http://$IP/"
 cd ..
 sed -i '' "s/20.237.5.253/$IP/" tls-manifest/certificate.yaml
+kubectl apply -f  tls-manifest/certificate.yaml 
 
 echo "Kubeflow is ready to use."
 
