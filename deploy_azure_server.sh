@@ -56,7 +56,8 @@ echo "Logged in to Azure."
 
 # * configure the kubenetes cluster
 echo "Configuring the Kubernetes cluster..."
-cd kubeflow-aks
+cp -r kubeflow-aks kubeflow-aks-runtime
+cd kubeflow-aks-runtime
 
 SIGNEDINUSER=$(az ad signed-in-user show --query id --out tsv)
 DEP=$(az deployment group create -g $RGNAME --parameters signedinuser=$SIGNEDINUSER -f main.bicep -o json)
@@ -76,7 +77,9 @@ new_email="kubeflow@ziyixi.science"
 sed -i.bak "s/email: $old_email/email: $new_email/" tls-manifest/manifests/common/dex/base/config-map.yaml
 
 # Add the HASHED_PASSWORD environment variable on line 22
-sed -i.bak "s/\(\s*hash:\s*\).*$/\1$HASHED_PASSWORD/" tls-manifest/manifests/common/dex/base/config-map.yaml
+HASHED_PASSWORD_ESCAPED=$(echo "$HASHED_PASSWORD" | sed 's/\$/\\$/g')
+sed -i.bak "s#\(\s*hash:\s*\).*\$#\1$HASHED_PASSWORD_ESCAPED#" tls-manifest/manifests/common/dex/base/config-map.yaml
+
 
 # Remove the backup file created by the 'sed' command
 rm tls-manifest/manifests/common/dex/base/config-map.yaml.bak
