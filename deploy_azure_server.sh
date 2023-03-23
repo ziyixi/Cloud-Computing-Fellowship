@@ -78,8 +78,7 @@ sed -i.bak "s/email: $old_email/email: $new_email/" tls-manifest/manifests/commo
 
 # Add the HASHED_PASSWORD environment variable on line 22
 HASHED_PASSWORD_ESCAPED=$(echo "$HASHED_PASSWORD" | sed 's/\$/\\$/g')
-sed -i.bak "s#\(\s*hash:\s*\).*\$#\1$HASHED_PASSWORD_ESCAPED#" tls-manifest/manifests/common/dex/base/config-map.yaml
-
+sed -i.bak "s#\(\s*hash:\s*\).*\$#\1 \"$HASHED_PASSWORD_ESCAPED\"#" tls-manifest/manifests/common/dex/base/config-map.yaml
 
 # Remove the backup file created by the 'sed' command
 rm tls-manifest/manifests/common/dex/base/config-map.yaml.bak
