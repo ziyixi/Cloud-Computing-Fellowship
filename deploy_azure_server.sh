@@ -82,13 +82,16 @@ sed -i.bak "s#\(\s*hash:\s*\).*\$#\1 \"$HASHED_PASSWORD_ESCAPED\"#" tls-manifest
 
 # Remove the backup file created by the 'sed' command
 rm tls-manifest/manifests/common/dex/base/config-map.yaml.bak
-cp -r tls-manifest/manifests/ manifests/
 
 echo "config has been updated for TLS"
 
 # * Install Kubeflow
 echo "Installing Kubeflow..."
 cd manifests/
+git checkout v1.6-branch
+cd ..
+cp -r tls-manifest/manifests/ manifests/
+cd manifests
 while ! kustomize build example | awk '!/well-defined/' | kubectl apply -f -; do
     echo "Retrying to apply resources"
     sleep 10
@@ -132,8 +135,3 @@ for ns in "${required_namespaces[@]}"; do
 done
 
 echo "All required pods are running."
-
-# * forward the kubeflow port
-echo "Forwarding the Kubeflow port..."
-kubectl port-forward svc/istio-ingressgateway -n istio-system 8443:443
-echo "Enjoy Kubeflow port forwarding!"
