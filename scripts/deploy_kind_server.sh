@@ -1,11 +1,7 @@
 #!/bin/bash
 
-# Custom configurations
-RGNAME="ccf22_xiziyi"
-SUBSNAME="Cloud Fellowship"
-
 # List of required commands
-commands=("az" "kubectl" "jq" "kustomize" "kubelogin" "python" "sed" "awk")
+commands=("kind" "kubectl" "kustomize" "python" "sed" "awk")
 
 # Function to check if a list of commands exists, exit script if not
 check_commands_exist() {
@@ -47,32 +43,20 @@ EOF
     fi
 }
 
-# Function to login to Azure
-login_to_azure() {
-    echo "Logging in to Azure..."
-    az login
-    az account set --subscription "$SUBSNAME"
-    echo "Logged in to Azure."
-}
-
 # Function to configure the Kubernetes cluster
 configure_kubernetes_cluster() {
     echo "Configuring the Kubernetes cluster..."
     cp -r kubeflow-aks kubeflow-aks-runtime
-    cd kubeflow-aks-runtime
-
-    local signedinuser=$(az ad signed-in-user show --query id --out tsv)
-    local dep=$(az deployment group create -g $RGNAME --parameters signedinuser=$signedinuser -f main.bicep -o json)
-    local akscluster=$(echo $dep | jq -r '.properties.outputs.aksClusterName.value')
-
-    az aks get-credentials --resource-group $RGNAME --name $akscluster --overwrite-existing
-    kubelogin convert-kubeconfig -l azurecli
-    echo "Kubernetes cluster is ready to use."
+    
+    kind create cluster --config scripts/config/kind_config.yaml --wait 2m
+    kubectl config use-context kind-kubecluster
+    kubectl cluster-info
     kubectl get nodes
 }
 
 # Function to configure TLS config file
 configure_tls_config_file() {
+    cd kubeflow-aks-runtime
     # Set the email address you want to replace
     local old_email="user@example.com"
     local new_email="kubeflow@ziyixi.science"
@@ -88,10 +72,12 @@ configure_tls_config_file() {
     rm tls-manifest/manifests/common/dex/base/config-map.yaml.bak
 
     echo "config has been updated for TLS"
+    cd ..
 }
 
 # Function to install Kubeflow
 install_kubeflow() {
+    cd kubeflow-aks-runtime
     echo "Installing Kubeflow..."
     cd manifests/
     git checkout v1.6-branch
@@ -113,50 +99,28 @@ install_kubeflow() {
     kubectl get pods -n kubeflow-user-example-com
     kubectl rollout restart deployment dex -n auth
 
-    local ip=$(kubectl -n istio-system get service istio-ingressgateway --output jsonpath={.status.loadBalancer.ingress[0].ip})
+    local ip=127.0.0.1
     echo "Kubeflow is deployed at http://$ip/"
     cd ..
     sed -i '' "s/20.237.5.253/$ip/" tls-manifest/certificate.yaml
     kubectl apply -f  tls-manifest/certificate.yaml 
 
     echo "Kubeflow is ready to use."
+    cd ..
 }
 
-# Function to wait for all required pods to be in the "Running" state
-wait_for_pods_running() {
-    local required_namespaces=("cert-manager" "istio-system" "auth" "knative-eventing" "knative-serving" "kubeflow" "kubeflow-user-example-com")
-
-    echo "Waiting for all required pods to be running..."
-
-    for ns in "${required_namespaces[@]}"; do
-        while true; do
-            echo "Checking pods in namespace $ns..."
-            local not_running_pods=$(kubectl get pods -n "$ns" --no-headers | grep -v "Running" | wc -l)
-            if [ "$not_running_pods" -eq 0 ]; then
-                echo "All pods in namespace $ns are running."
-                break
-            else
-                echo "Some pods are not running in namespace $ns. Retrying in 10 seconds..."
-                sleep 10
-            fi
-        done
-    done
-
-    echo "All required pods are running."
-}
 
 # Function to remove the kubeflow-aks-runtime folder
 remove_kubeflow_aks_runtime() {
-    cd ..
     rm -rf kubeflow-aks-runtime
+    kind delete cluster --name kubecluster
 }
 
 # Main script execution
+cd ..
 check_commands_exist "${commands[@]}"
 generate_password_hash
-login_to_azure
 configure_kubernetes_cluster
 configure_tls_config_file
 install_kubeflow
-wait_for_pods_running
-remove_kubeflow_aks_runtime
+# remove_kubeflow_aks_runtime
